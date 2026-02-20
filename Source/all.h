@@ -34,6 +34,7 @@ extern "C" {
 #include "fault.h"
 #include "gamemenu.h"
 #include "gendung.h"
+#include "gamestate.h"
 #include "gmenu.h"
 #include "help.h"
 #include "init.h"

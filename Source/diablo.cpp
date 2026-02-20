@@ -56,6 +56,10 @@ BOOLEAN UseMultiTest;
 int sgnTimeoutCurs;
 char sgbMouseDown;
 int color_cycle_timer;
+DWORD gdwGameLogicTick;
+#ifdef _DEBUG
+static DWORD sgLastDeterminismLogTick;
+#endif
 
 /* rdata */
 
@@ -318,6 +322,11 @@ static void start_game(unsigned int uMsg)
 	ShowProgress(uMsg);
 	gmenu_init_menu();
 	InitLevelCursor();
+	InitGameState();
+	gdwGameLogicTick = 0;
+#ifdef _DEBUG
+	sgLastDeterminismLogTick = 0;
+#endif
 	sgnTimeoutCurs = CURSOR_NONE;
 	sgbMouseDown = CLICK_NONE;
 	track_repeat_walk(FALSE);
@@ -2070,8 +2079,38 @@ void LoadGameLevel(BOOL firstflag, int lvldir)
 #endif
 }
 
+static void game_logic_determinism_guard(const GameState *state)
+{
+#ifdef _DEBUG
+	assert(state != NULL);
+	assert(state->nummonsters != NULL);
+	assert(state->nummissiles != NULL);
+	assert(state->numitems != NULL);
+
+	if (gdwGameLogicTick - sgLastDeterminismLogTick >= 200) {
+		log_printf(
+		    "[determinism] tick=%lu seed=%d lvl=%u monsters=%d missiles=%d items=%d view=(%d,%d)",
+		    gdwGameLogicTick,
+		    GetRndSeed(),
+		    *state->currlevel,
+		    *state->nummonsters,
+		    *state->nummissiles,
+		    *state->numitems,
+		    *state->ViewX,
+		    *state->ViewY);
+		sgLastDeterminismLogTick = gdwGameLogicTick;
+	}
+#else
+	UNREFERENCED_PARAMETER(state);
+#endif
+}
+
 static void game_logic()
 {
+	const GameState *state = GetGameState();
+	gdwGameLogicTick++;
+	game_logic_determinism_guard(state);
+
 	if (PauseMode == 2) {
 		return;
 	}
@@ -2093,14 +2132,14 @@ static void game_logic()
 	if (leveltype != DTYPE_TOWN) {
 		ProcessMonsters();
 		ProcessObjects();
-		ProcessMissiles();
+		ProcessMissilesGameState(state);
 		ProcessItems();
 		ProcessLightList();
 		ProcessVisionList();
 	} else {
 		ProcessTowners();
 		ProcessItems();
-		ProcessMissiles();
+		ProcessMissilesGameState(state);
 	}
 
 #ifdef _DEBUG
