@@ -12,6 +12,8 @@ extern MissileStruct missile[MAXMISSILES];
 extern int nummissiles;
 extern BOOL MissilePreFlag;
 
+typedef struct GameState GameState;
+
 void GetDamageAmt(int i, int *mind, int *maxd);
 int GetSpellLevel(int id, int sn);
 void DeleteMissile(int mi, int i);
@@ -180,6 +182,7 @@ void MI_Bonespirit(int i);
 void MI_ResurrectBeam(int i);
 void MI_Rportal(int i);
 void ProcessMissiles();
+void ProcessMissilesGameState(const GameState *state);
 void missiles_process_charge();
 void ClearMissileSpot(int mi);
 

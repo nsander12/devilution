@@ -5907,69 +5907,93 @@ void MI_Rportal(int i)
 	PutMissile(i);
 }
 
-void ProcessMissiles()
+void ProcessMissilesGameState(const GameState *state)
 {
 	int i, mi;
+	MissileStruct *missiles;
+	int *activeMissiles;
+	int activeMissileCount;
+	char (*flags)[MAXDUNY];
+	char (*activeMissileMap)[MAXDUNY];
 
-	for (i = 0; i < nummissiles; i++) {
-		dFlags[missile[missileactive[i]]._mix][missile[missileactive[i]]._miy] &= ~BFLAG_MISSILE;
-		dMissile[missile[missileactive[i]]._mix][missile[missileactive[i]]._miy] = 0;
+	assert(state != NULL);
+	assert(state->missiles != NULL);
+	assert(state->missileactive != NULL);
+	assert(state->nummissiles != NULL);
+	assert(state->dFlags != NULL);
+	assert(state->dMissile != NULL);
+	assert(state->missilePreFlag != NULL);
+
+	missiles = state->missiles;
+	activeMissiles = state->missileactive;
+	activeMissileCount = *state->nummissiles;
+	flags = state->dFlags;
+	activeMissileMap = state->dMissile;
+
+	for (i = 0; i < activeMissileCount; i++) {
+		flags[missiles[activeMissiles[i]]._mix][missiles[activeMissiles[i]]._miy] &= ~BFLAG_MISSILE;
+		activeMissileMap[missiles[activeMissiles[i]]._mix][missiles[activeMissiles[i]]._miy] = 0;
 #ifdef HELLFIRE
-		if (missile[missileactive[i]]._mix < 0 || missile[missileactive[i]]._mix >= MAXDUNX - 1 || missile[missileactive[i]]._miy < 0 || missile[missileactive[i]]._miy >= MAXDUNY - 1)
-			missile[missileactive[i]]._miDelFlag = TRUE;
+		if (missiles[activeMissiles[i]]._mix < 0 || missiles[activeMissiles[i]]._mix >= MAXDUNX - 1 || missiles[activeMissiles[i]]._miy < 0 || missiles[activeMissiles[i]]._miy >= MAXDUNY - 1)
+			missiles[activeMissiles[i]]._miDelFlag = TRUE;
 #endif
 	}
 
 	i = 0;
-	while (i < nummissiles) {
-		if (missile[missileactive[i]]._miDelFlag) {
-			DeleteMissile(missileactive[i], i);
+	while (i < *state->nummissiles) {
+		if (missiles[activeMissiles[i]]._miDelFlag) {
+			DeleteMissile(activeMissiles[i], i);
 			i = 0;
 		} else {
 			i++;
 		}
 	}
 
-	MissilePreFlag = FALSE;
+	*state->missilePreFlag = FALSE;
 	ManashieldFlag = FALSE;
 
-	for (i = 0; i < nummissiles; i++) {
-		mi = missileactive[i];
-		missiledata[missile[mi]._mitype].mProc(missileactive[i]);
-		if (!(missile[mi]._miAnimFlags & MFLAG_LOCK_ANIMATION)) {
-			missile[mi]._miAnimCnt++;
-			if (missile[mi]._miAnimCnt >= missile[mi]._miAnimDelay) {
-				missile[mi]._miAnimCnt = 0;
-				missile[mi]._miAnimFrame += missile[mi]._miAnimAdd;
-				if (missile[mi]._miAnimFrame > missile[mi]._miAnimLen)
-					missile[mi]._miAnimFrame = 1;
-				if (missile[mi]._miAnimFrame < 1)
-					missile[mi]._miAnimFrame = missile[mi]._miAnimLen;
+	for (i = 0; i < *state->nummissiles; i++) {
+		mi = activeMissiles[i];
+		missiledata[missiles[mi]._mitype].mProc(activeMissiles[i]);
+		if (!(missiles[mi]._miAnimFlags & MFLAG_LOCK_ANIMATION)) {
+			missiles[mi]._miAnimCnt++;
+			if (missiles[mi]._miAnimCnt >= missiles[mi]._miAnimDelay) {
+				missiles[mi]._miAnimCnt = 0;
+				missiles[mi]._miAnimFrame += missiles[mi]._miAnimAdd;
+				if (missiles[mi]._miAnimFrame > missiles[mi]._miAnimLen)
+					missiles[mi]._miAnimFrame = 1;
+				if (missiles[mi]._miAnimFrame < 1)
+					missiles[mi]._miAnimFrame = missiles[mi]._miAnimLen;
 			}
 		}
 	}
 
 	if (ManashieldFlag) {
-		for (i = 0; i < nummissiles; i++) {
-			if (missile[missileactive[i]]._mitype == MIS_MANASHIELD) {
-				MI_Manashield(missileactive[i]);
+		for (i = 0; i < *state->nummissiles; i++) {
+			if (missiles[activeMissiles[i]]._mitype == MIS_MANASHIELD) {
+				MI_Manashield(activeMissiles[i]);
 			}
 		}
 	}
 
 	i = 0;
-	while (i < nummissiles) {
+	while (i < *state->nummissiles) {
 #ifdef HELLFIRE
-		if (missile[missileactive[i]]._miDelFlag == TRUE) {
+		if (missiles[activeMissiles[i]]._miDelFlag == TRUE) {
 #else
-		if (missile[missileactive[i]]._miDelFlag) {
+		if (missiles[activeMissiles[i]]._miDelFlag) {
 #endif
-			DeleteMissile(missileactive[i], i);
+			DeleteMissile(activeMissiles[i], i);
 			i = 0;
 		} else {
 			i++;
 		}
 	}
+}
+
+void ProcessMissiles()
+{
+	ProcessMissilesGameState(GetGameState());
 }
 
 void missiles_process_charge()
